@@ -1,0 +1,63 @@
+using System;
+using System.Data.SQLite;
+using System.Windows.Forms;
+
+namespace AppA
+{
+    public partial class Form1 : Form
+    {
+        string connA = "Data Source=AppA.db;Version=3;";
+        string connB = "Data Source=AppB.db;Version=3;";
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        // Thêm dữ liệu vào CSDL AppA
+        private void btnAdd_Click(object sender, EventArgs e)
+        {
+            using (var conn = new SQLiteConnection(connA))
+            {
+                conn.Open();
+                string query = "INSERT INTO ProductsA (Name, Price) VALUES (@name, @price)";
+                using (var cmd = new SQLiteCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@name", txtName.Text);
+                    cmd.Parameters.AddWithValue("@price", decimal.Parse(txtPrice.Text));
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            MessageBox.Show("Thêm vào AppA thành công!");
+        }
+
+        // Đồng bộ dữ liệu từ AppA sang AppB
+        private void btnSyncToB_Click(object sender, EventArgs e)
+        {
+            using (var connA = new SQLiteConnection(this.connA))
+            using (var connB = new SQLiteConnection(this.connB))
+            {
+                connA.Open();
+                connB.Open();
+
+                // Lấy toàn bộ dữ liệu từ AppA
+                string query = "SELECT Name, Price FROM ProductsA";
+                using (var cmd = new SQLiteCommand(query, connA))
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string insert = "INSERT INTO ProductsB (Name, Price) VALUES (@name, @price)";
+                        using (var cmdB = new SQLiteCommand(insert, connB))
+                        {
+                            cmdB.Parameters.AddWithValue("@name", reader["Name"]);
+                            cmdB.Parameters.AddWithValue("@price", reader["Price"]);
+                            cmdB.ExecuteNonQuery();
+                        }
+                    }
+                }
+            }
+            MessageBox.Show("Đồng bộ sang AppB thành công!");
+        }
+    }
+}
